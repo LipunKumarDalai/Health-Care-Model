@@ -37,6 +37,7 @@
 <li>DataTransformation using OnehotEncoder and TransactionEncoder for Encoding Categorical Features</li>
 <li>FPgrowth and apriori for association rule-mining</li>
 <li>Feature extraction using TfidfVectorizer on precautions</li>
+<li>Severity mapping</li>
 <li>Evaluation metrics confidence,support and jaccard similarity index</li>
 
 ### Tech Stack
