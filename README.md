@@ -44,4 +44,4 @@
 <li>Pandas,Numpy</li>
 <li>Plotly,matplotlib,seaborn</li>
 <li>Scikit-learn,mlxtend</li>
-<li>Streamlit</li>
+<li>Streamlit,jupyter lab</li>
