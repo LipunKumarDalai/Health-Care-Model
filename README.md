@@ -30,4 +30,18 @@
        'kaposi sarcoma', 'spondylolisthesis', 'pseudotumor cerebri',
        'conjunctivitis due to virus', 'open wound of the nose'</li>
 <li>Total Samples: ~246000</li>
-##
+
+### Features
+<li>Data-Preprocessing Using Pandas,Numpy,Scikit-learn,mlxtend</li>
+<li>Exploratory Data-analysis and visualizations for each unique disease.</li>
+<li>DataTransformation using OnehotEncoder and TransactionEncoder for Encoding Categorical Features</li>
+<li>FPgrowth and apriori for association rule-mining</li>
+<li>Feature extraction using TfidfVectorizer on precautions</li>
+<li>Evaluation metrics confidence,support and jaccard similarity index</li>
+
+### Tech Stack
+<li>Python 3.x</li>
+<li>Pandas,Numpy</li>
+<li>Plotly,matplotlib,seaborn</li>
+<li>Scikit-learn,mlxtend</li>
+<li>Streamlit</li>
