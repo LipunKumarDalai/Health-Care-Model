@@ -15,7 +15,7 @@ def load_dt():
     return data,diseases,symptoms
 @st.cache_resource
 def load_mdl():
-    symp_rule = joblib.load(f"src\Models\FPgrowth.pkl")
+    symp_rule = joblib.load(f"src\Models\FPgrowth1.pkl")
     return symp_rule
 @st.cache_data
 def load_rules(symp_rule,symptoms,diseases):
@@ -121,7 +121,7 @@ if result_s1:
     except:
         pass  
 else:
-    s2 = st.sidebar.selectbox("Type Symptom 2",options=result_s1,index=None)
+    s2 = st.sidebar.selectbox("Type Symptom 2",options=set(symptoms)-{s1},index=None)
 
 
 result_s2 = prediction_symptoms(y)
@@ -181,53 +181,58 @@ if s1 and s2:
             if j in list(n_set):
                indx = i
                total += svr.loc[indx,["Severity_level"]]
-        avg = total/len(list(n_set))
-        if int(avg)<=1:
-            st.success("Symptoms are mild and common. Home care and rest are usually sufficient.")
-            st.write("See Precautions for more details")
-        elif int(avg)==2:
-            st.warning("Symptoms are moderate. It is advisable to consult a doctor if they persist or worsen.")
-            st.write("See Precautions for more details")
-        elif int(avg)>=3:
-            st.error("🚨 Symptoms are severe. Immediate medical attention or hospital visit is recommended.")
-        pre_data = pd.read_csv("src/Data/Sources/symptoms_precautions_updated.csv")
-        tfidf = TfidfVectorizer(stop_words='english') #removes stopwords (if,or,in etc)
-        tx = tfidf.fit_transform(pre_data['Precaution'])
-        s = list(n_set)
-        string = " ".join(s)
-        tr = tfidf.transform([string])
-        sml = cosine_similarity(tr,tx)
-        idx = sml.argmax()
-        result_precautions = pre_data.loc[idx,["Precaution"]].values
-        expander = st.expander("Show Precaution")
-        expander.write(result_precautions[0])
-        result_diseases = prediction_diseases(n_set)
-        try:
+        if len(list(n_set))!=0:
+            avg = total/len(list(n_set))
+            if int(avg)<=1:
+               st.success("Symptoms are mild and common. Home care and rest are usually sufficient.")
+               st.write("See Precautions for more details")
+            elif int(avg)==2:
+               st.warning("Symptoms are moderate. It is advisable to consult a doctor if they persist or worsen.")
+               st.write("See Precautions for more details")
+            elif int(avg)>=3:
+               st.error("🚨 Symptoms are severe. Immediate medical attention or hospital visit is recommended.")
+            pre_data = pd.read_csv("src/Data/Sources/symptoms_precautions_updated.csv")
+            tfidf = TfidfVectorizer(stop_words='english') #removes stopwords (if,or,in etc)
+            tx = tfidf.fit_transform(pre_data['Precaution'])
+            s = list(n_set)
+            string = " ".join(s)
+            tr = tfidf.transform([string])
+            sml = cosine_similarity(tr,tx)
+            idx = sml.argmax()
+            result_precautions = pre_data.loc[idx,["Precaution"]].values
+            expander = st.expander("Show Precaution")
+            expander.write(result_precautions[0])
+            result_diseases = prediction_diseases(n_set)
+            try:
           
-           st.success("Possible Diseases and Symptoms")
+               st.success("Possible Diseases and Symptoms")
           
-           df1 = pd.DataFrame(result_diseases).sort_values(by="confidence",ascending=False)
-           l = []
-           l1 = []
-           for i in df1['symptoms']:
-               l.append(re.sub(f"[""''\[\]]+","",str(i)))
-           df1['symptoms'] = l
-           for i in df1['pos_diseases']:
-               l1.append(re.sub(f"[""''\[\]]+","",str(i)))
+               df1 = pd.DataFrame(result_diseases).sort_values(by="confidence",ascending=False)
+               l = []
+               l1 = []
+               for i in df1['symptoms']:
+                   l.append(re.sub(f"[""''\[\]]+","",str(i)))
+               df1['symptoms'] = l
+               for i in df1['pos_diseases']:
+                  l1.append(re.sub(f"[""''\[\]]+","",str(i)))
+               df1['pos_diseases']=l1 
+               cols = st.columns(3)
 
-           df1['pos_diseases']=l1 
-           cols = st.columns(3)
-
-           for j,i in enumerate(df1['symptoms'].value_counts().reset_index().head(3).values):
-               new = df1[df1['symptoms']==i[0]].sort_values(by='confidence',ascending=False).head(5)
-               fig = pxs.pie(new,values='confidence',names='pos_diseases',title=f"Possible Diseases with Symptom: {i[0]}")
-               cols[j] = st.plotly_chart(fig,use_container_width=True)
+               for j,i in enumerate(df1['symptoms'].value_counts().reset_index().head(3).values):
+                  new = df1[df1['symptoms']==i[0]].sort_values(by='confidence',ascending=False).head(5)
+                  fig = pxs.pie(new,values='confidence',names='pos_diseases',title=f"Possible Diseases with Symptom: {i[0]}")
+                  cols[j] = st.plotly_chart(fig,use_container_width=True)
             #    st.write(fig)
-        except:
-             df1 = pd.DataFrame(result_diseases).sort_values(by="confidence",ascending=False).head(3)
-             df1["Diseases"] = df1["Diseases"].apply(lambda x: ", ".join(x) if isinstance(x, frozenset) else str(x)) #converting frozen type to list
-             fig = pxs.pie(df1,values="confidence",names="Diseases")
-             st.write(fig)
+            except:
+                df1 = pd.DataFrame(result_diseases).sort_values(by="confidence",ascending=False).head(3)
+                df1["Diseases"] = df1["Diseases"].apply(lambda x: ", ".join(x) if isinstance(x, frozenset) else str(x)) #converting frozen type to list
+                fig = pxs.pie(df1,values="confidence",names="Diseases")
+                st.write(fig)
+        else:
+            st.error("🚨We couldn’t find any matches for the symptoms you entered.Its an issue from our side.Please try different symptom combinations.")
+
+            
+        
 
 #--------------------------------------------------------------------------------
 # result_s4 = prediction_symptoms(y2)
