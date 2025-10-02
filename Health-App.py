@@ -6,17 +6,37 @@ import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import re
+from PIL import Image
+import json
+
+st.set_page_config(layout="wide")
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+
 # import matplotlib.pyplot as plt
 @st.cache_data
 def load_dt():
     data = pd.read_csv("src/Data/data_preprocess.csv")
+    data_c = pd.read_csv("src/Data/LblEncodeDF.csv")
     diseases = [i for i in data.columns if i.startswith("diseases_")]
     symptoms = [i for i in data.columns if not i.startswith("diseases_")]
-    return data,diseases,symptoms
+    return data,diseases,symptoms,data_c
 @st.cache_resource
 def load_mdl():
     symp_rule = joblib.load(f"src\Models\FPgrowth1.pkl")
-    return symp_rule
+    disease_neural = joblib.load("src/Models/Neural.pkl")
+    label_ = joblib.load("src/Models/LabelEncode.pkl")
+    return symp_rule,disease_neural,label_
 @st.cache_data
 def load_rules(symp_rule,symptoms,diseases):
     symptom = symp_rule[
@@ -29,8 +49,8 @@ def load_rules(symp_rule,symptoms,diseases):
     ]
     return symptom,disease
 
-data,diseases,symptoms = load_dt()
-symp_rule = load_mdl()
+data,diseases,symptoms,data_ac = load_dt()
+symp_rule,disease_neural,label_ = load_mdl()
 symptom,disease =load_rules(symp_rule,symptoms,diseases)
 
 def jaccard_sml(s1,s2):
@@ -101,10 +121,24 @@ def prediction_diseases(user_symp):
 
 
 
-st.header("Health-Care Model",divider=True)
-st.markdown("<b>This model helps users identify potential diseases based on their current symptoms. It also recommends additional related symptoms to monitor and provides precautionary measures, using insights from past symptom patterns.</b>",unsafe_allow_html=True)
+# st.write("<h1 style='color:white'>Health-Care Model</h1>",unsafe_allow_html=True)
+# st.write("<b style='color:white'>This model helps users identify potential diseases based on their current symptoms. It also recommends additional related symptoms to monitor and provides precautionary measures, using insights from past symptom patterns.</b>",unsafe_allow_html=True)
 st.sidebar.subheader("Input Section")
 st.sidebar.text("Choose atleast 2 symptoms.")
+st.write("<h1 style='color:black;text-align:center'>Well Predict</h1>",unsafe_allow_html=True)
+
+img = Image.open("image/health.jpg")
+img = img.resize((900, 600))
+
+c1,c2 = st.columns([0.6,0.4])
+with c1:
+    st.write("<p><b style=color:black;>Our Well Predict prediction system is designed to assist users in identifying possible diseases based on the symptoms they provide. If a user enters all symptoms correctly, the model evaluates the full combination to generate the most accurate disease prediction. However, in real scenarios users may sometimes enter incomplete or incorrect symptoms. In such cases, the system is capable of adapting intelligently:</b></p>" \
+    "<p><b  style=color:black;>Incorrect or unrelated inputs → The model analyzes available symptoms and attempts to match at least one symptom with known conditions.</b></p>" \
+    "<p><b style=color:black;>Partial matches → If only one or two valid symptoms are detected, the system still predicts diseases associated with those symptoms.</b></p>" \
+    "<p><b style=color:black;>Fallback approach → Even with a single valid symptom, the model provides a list of the most likely diseases linked to that symptom.</b></p>" \
+    "<p><b style=color:black;>In addition to disease predictions, the system also suggests related symptoms that are commonly observed together, helping users cross-check and refine their input. This ensures that the tool remains helpful and provides meaningful insights even when the input data is incomplete, noisy, or uncertain. The ultimate goal is to support early guidance and awareness, not to replace professional medical advice. </b></p>",unsafe_allow_html=True)
+with c2:
+    st.image(img)
 #SYMPTOMS RECOMMENDATION
 #--------------------------------------------------------------------------------
 s1 = st.sidebar.selectbox("Type Symptom 1",options=symptoms,index=None)
@@ -122,6 +156,10 @@ if result_s1:
         pass  
 else:
     s2 = st.sidebar.selectbox("Type Symptom 2",options=set(symptoms)-{s1},index=None)
+    if s2:
+        y.add(s1)
+        y.add(s2)
+
 
 
 result_s2 = prediction_symptoms(y)
@@ -137,7 +175,9 @@ if result_s2:
     except:
         pass
 else:
-    s3 = st.sidebar.selectbox("Type Symptom 3",options=result_s2,index=None)
+    s3 = st.sidebar.selectbox("Type Symptom 3",options=set(symptoms)-result_s2,index=None)
+    if s3:
+        y2.add(s3)
 
 result_s3 = prediction_symptoms(y2)
 y_final = set()
@@ -153,10 +193,9 @@ if result_s3:
         pass
     
 else:
-    s4 = st.sidebar.selectbox("Type Symptom 4",options=result_s3,index=None)
-
-
-
+    s4 = st.sidebar.selectbox("Type Symptom 4",options=set(symptoms)-result_s3,index=None)
+    if s4:
+        y_final.add(s4)
 
 
 #DISEASES PREDICTION
@@ -185,12 +224,26 @@ if s1 and s2:
             avg = total/len(list(n_set))
             if int(avg)<=1:
                st.success("Symptoms are mild and common. Home care and rest are usually sufficient.")
-               st.write("See Precautions for more details")
             elif int(avg)==2:
                st.warning("Symptoms are moderate. It is advisable to consult a doctor if they persist or worsen.")
-               st.write("See Precautions for more details")
             elif int(avg)>=3:
                st.error("🚨 Symptoms are severe. Immediate medical attention or hospital visit is recommended.")
+            
+
+            d_lst = list(n_set)
+            inputs = np.zeros(377,dtype="int")
+            for i,j in enumerate(data_ac.columns[1:]):
+               if j in d_lst:
+                  inputs[i] = 1
+            result = disease_neural.predict(inputs.reshape(1,-1))
+            maxi_label = np.argmax(result)
+            out = label_.inverse_transform([maxi_label])
+            st.success("Disease Predicted",width=180)
+            st.write("<b style='color:black'>Disease Predicted:</b>",f"<b style='color:black'>{''.join(out)}</b>",unsafe_allow_html=True)
+
+
+
+    
             pre_data = pd.read_csv("src/Data/Sources/symptoms_precautions_updated.csv")
             tfidf = TfidfVectorizer(stop_words='english') #removes stopwords (if,or,in etc)
             tx = tfidf.fit_transform(pre_data['Precaution'])
@@ -200,12 +253,12 @@ if s1 and s2:
             sml = cosine_similarity(tr,tx)
             idx = sml.argmax()
             result_precautions = pre_data.loc[idx,["Precaution"]].values
-            expander = st.expander("Show Precaution")
-            expander.write(result_precautions[0])
+            expander = st.expander("Quick Precaution")
+            expander.write(f"<b style='color:black'>{result_precautions[0]}</b>",unsafe_allow_html=True)
             result_diseases = prediction_diseases(n_set)
             try:
           
-               st.success("Possible Diseases and Symptoms")
+               
           
                df1 = pd.DataFrame(result_diseases).sort_values(by="confidence",ascending=False)
                l = []
@@ -216,26 +269,51 @@ if s1 and s2:
                for i in df1['pos_diseases']:
                   l1.append(re.sub(f"[""''\[\]]+","",str(i)))
                df1['pos_diseases']=l1 
-               cols = st.columns(3)
-
+               csv = df1.drop(columns="confidence")
+               csv_dt = csv.to_csv(index=False)
+               st.sidebar.text("Find More Possible diseases with symptoms")
+               st.sidebar.download_button("Download csv",csv_dt,file_name="Diseases_symptoms.csv")
+               st.success("Possible Diseases and Symptoms You Might Face.")
+               cols = st.columns([0.33,0.33,.33])
                for j,i in enumerate(df1['symptoms'].value_counts().reset_index().head(3).values):
                   new = df1[df1['symptoms']==i[0]].sort_values(by='confidence',ascending=False).head(5)
-                  fig = pxs.pie(new,values='confidence',names='pos_diseases',title=f"Possible Diseases with Symptom: {i[0]}")
-                  cols[j] = st.plotly_chart(fig,use_container_width=True)
+                  fig = pxs.pie(new,values='confidence',names='pos_diseases',title=f"Possible Symptom: {i[0]}")
+                  with cols[j]: st.plotly_chart(fig,use_container_width=True)
             #    st.write(fig)
             except:
-                df1 = pd.DataFrame(result_diseases).sort_values(by="confidence",ascending=False).head(3)
-                df1["Diseases"] = df1["Diseases"].apply(lambda x: ", ".join(x) if isinstance(x, frozenset) else str(x)) #converting frozen type to list
-                fig = pxs.pie(df1,values="confidence",names="Diseases")
-                st.write(fig)
+                st.warning("No additional Symptoms and diseases found")
+
+                # df1 = pd.DataFrame(result_diseases).sort_values(by="confidence",ascending=False).head(3)
+                # df1["Diseases"] = df1["Diseases"].apply(lambda x: ", ".join(x) if isinstance(x, frozenset) else str(x)) #converting frozen type to list
+                # fig = pxs.pie(df1,values="confidence",names="Diseases")
+                # st.write(fig)
+
+
+            #detailed precautions
+            with open("src/Data/P_m.json","r") as rd: 
+                med = json.load(rd)
+            medicine = []
+            detail_pre = []
+            for i in med:
+                if i["symptom"] in s:
+                       detail_pre.append(i["precautions"])
+                       medicine.append([i["symptom"],i["medicines"]])
+            st.success("Precautions Predicted")
+            for i in detail_pre:
+                st.write(f"<b>{' '.join(i)}\n</b>",unsafe_allow_html=True)
+            st.success("Medicines Predicted")
+            for i,j in enumerate(medicine):
+                st.write(f"<b>{j[0] +'→'}</b>",unsafe_allow_html=True)
+                for k in j[1]:
+                    st.write(f"<b>{k['name']+' : '+k['dose']}</b>",unsafe_allow_html=True)
+                st.write(" ")
+
+
+
+
         else:
             st.error("🚨We couldn’t find any matches for the symptoms you entered.Its an issue from our side.Please try different symptom combinations.")
 
             
         
 
-#--------------------------------------------------------------------------------
-# result_s4 = prediction_symptoms(y2)
-# s5 = st.sidebar.selectbox("Type Symptom 5",options=result_s4,accept_new_options=False)
-# s4 = st.sidebar.selectbox("Type Symptom 4",options=set(symptoms)-{s1,s2,s3},accept_new_options=False,index=None)
-# s5 = st.sidebar.selectbox("Type Symptom 5",options=set(symptoms)-{s1,s2,s3,s4},accept_new_options=False,index=None)
