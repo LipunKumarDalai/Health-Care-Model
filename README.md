@@ -48,8 +48,9 @@
 <li>Streamlit,jupyter lab</li>
 
 ### Demonstrations
-<img width="1767" height="967" alt="newH2" src="https://github.com/user-attachments/assets/ca15d044-543a-4896-90b1-c8da07523b75" />
-<img width="1757" height="956" alt="newH1" src="https://github.com/user-attachments/assets/6497194e-8080-484a-a4a6-c6bb9c505519" />
-<img width="1767" height="965" alt="newH4" src="https://github.com/user-attachments/assets/420768ce-2832-4752-a22f-1fc3543ce796" />
-<img width="1752" height="958" alt="newH3" src="https://github.com/user-attachments/assets/2ee45945-163a-4412-b0a0-a06f5310e45d" />
+<img width="1830" height="655" alt="image" src="https://github.com/user-attachments/assets/3bec3d5a-0d74-407e-8596-64558b1ab909" />
+<img width="1772" height="877" alt="image" src="https://github.com/user-attachments/assets/829bd4d4-ffb1-427f-8725-e9b776d688ed" />
+<img width="1785" height="922" alt="image" src="https://github.com/user-attachments/assets/e459627b-3260-498c-afa7-3fb6876d8c20" />
+
+
 
